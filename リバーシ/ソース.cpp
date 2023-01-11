@@ -270,6 +270,7 @@ int main() {
 	//ループ
 	while (1)
 	{
+		//乱数を初期化する
 		srand((unsigned int)time(NULL));
 		//描画する
 		drawBoard();
@@ -320,13 +321,16 @@ int main() {
 		//現在のターンの担当がプレイヤーでないなら
 		else
 		{
-			//対象の座標に石を置けるかどうか判定する
+			//AIの座標が置けるモノになるまでループする
 			while (!checkCanPut(turn, AIx, AIy, false))
 			{
+				//AIの座標をランダムで取得する
 				int AIx = rand() % BOARD_WIDTH;
-				int AIy = rand() % BOARD_HEIGHT;	
+				int AIy = rand() % BOARD_HEIGHT;
+				//AIの座標が置けるモノになったら
 				if (checkCanPut(turn, AIx, AIy, false))
 				{
+					//石が置ける状態
 					checkCanPut(turn, AIx, AIy, true);
 					break;
 				}
