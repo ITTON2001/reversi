@@ -82,7 +82,7 @@ bool checkCanPut(int _color, int _x, int _y,bool _turnOver) {
 			y += directions[i][1];
 
 			//範囲外になった時ループを抜ける
-			if((x<=0) || (x>= BOARD_WIDTH) || (y<0) || (y>= BOARD_HEIGHT))
+			if((x<0) || (x> BOARD_WIDTH) || (y<0) || (y> BOARD_HEIGHT))
 				break;
 			
 			//石がなかった時ループを抜ける
@@ -108,10 +108,46 @@ bool checkCanPut(int _color, int _x, int _y,bool _turnOver) {
 					if ((x2 == x) && (y2 == y))
 						break;
 				}
+				break;
 			}
 		}
+
 	}
 	return false;
+}
+
+//盤面全体で置ける場所があるかチェックする
+bool checkCanPutAll(int _color) {
+	for (int y = 0; y < BOARD_HEIGHT; y++)
+		for (int x = 0; x < BOARD_WIDTH; x++)
+			//もし置ける場所があれば置けるとする
+			if (checkCanPut(_color, x, y, false))
+				return true;	
+	//置ける場所がなければfalseのまま
+	return false;
+}
+
+//描画関数
+void drawBoard() {
+	//描画処理
+	system("cls");
+	//盤面を定義する
+	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		for (int x = 0; x < BOARD_WIDTH; x++)
+			//カーソルの設定
+			if ((x == cursorX) && (y == cursorY))
+				printf("◎");			
+			else {
+				switch (cells[y][x])
+				{
+				case COLOR_NONE:	printf("・");	break;//セルが無い場合
+				case COLOR_BLACK:	printf("○");	break;//セルが黒
+				case COLOR_WHITE:	printf("●");	break;//セルが白
+				}
+			}
+
+		printf("\n");//改行
+	}
 }
 
 //メイン
@@ -131,25 +167,9 @@ int main() {
 	//ループ
 	while (1)
 	{
-		//描画処理
-		system("cls");
-		//盤面を定義する
-		for (int y = 0; y < BOARD_HEIGHT; y++){
-			for (int x = 0; x < BOARD_WIDTH; x++)
-				//カーソルの設定
-				if ((x == cursorX) && (y == cursorY))
-					printf("◎");
-				else {
-					switch (cells[y][x])
-					{
-					case COLOR_NONE:	printf("・");	break;//セルが無い場合
-					case COLOR_BLACK:	printf("○");	break;//セルが黒
-					case COLOR_WHITE:	printf("●");	break;//セルが白
-					}
-				}
-					
-			printf("\n");//改行
-		}
+		//描画する
+		drawBoard();
+		
 		//石が置けないフラグが建ったとき
 		if (cantPut)
 			printf("Can't put!\n");
@@ -174,13 +194,66 @@ int main() {
 				break;
 			}
 
-			//
+			//石が置ける場合
 			checkCanPut(turn, cursorX, cursorY, true);
 
 			//上記以外のキーを押すと現在のターンの石を配置する
 			cells[cursorY][cursorX] = turn;
 			//ターンを切り替える
 			turn ^= 1;
+
+			//自分のターンで置けなかった場合(パスの処理)
+			if (!checkCanPutAll(turn))
+				//ターンを切り替える
+				turn ^= 1;
+				printf("配置できる場所がないため、パスされました");
+			break;
+		}
+
+		//範囲外にカーソルが行かないようにする
+		if (cursorX < 0)
+			cursorX++;
+		else if (cursorX >= BOARD_WIDTH)
+			cursorX--;
+		else if (cursorY < 0)
+			cursorY++;
+		else if (cursorY >= BOARD_HEIGHT)
+			cursorY--;
+
+
+		//白も黒も置けなくなった場合ゲームを終了する
+		if ((!checkCanPutAll(COLOR_BLACK)) && (!checkCanPutAll(COLOR_WHITE))) {
+			//再描画する
+			drawBoard();
+			
+			//色の個数の集計をする関数
+			int count[COLOR_MAX] = {};
+			for (int y = 0; y < BOARD_HEIGHT; y++)
+				for (int x = 0; x < BOARD_WIDTH; x++)
+					//石が置かれてなければcountを追加する
+					if (cells[y][x] != COLOR_NONE)
+						count[cells[y][x]]++;
+
+			//石の集計が終わってから再描画する
+			drawBoard();
+			for (int i = 0; i < COLOR_MAX; i++)
+				//黒白それぞれの数を描画する
+				printf("%s:%d\n", colorNames[i],count[i]);
+
+			//引き分けの場合
+			if (count[COLOR_BLACK] == count[COLOR_WHITE])
+				printf("Draw!\n");
+			//どちらかの方が数が多い場合
+			else {
+				if(count[COLOR_BLACK] > count[COLOR_WHITE])
+					printf("%s\n", colorNames[COLOR_BLACK]);
+				else
+					printf("%s\n", colorNames[COLOR_WHITE]);
+
+				printf("Won!\n");
+			}
+
+			_getch();
 			break;
 		}
 	}
