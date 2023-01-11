@@ -38,6 +38,7 @@ enum
 {
 	MODE_1P,	//AIとの対戦モード
 	MODE_2P,	//人間同士の対戦モード
+	MODE_WATCH, //観戦モード
 	MODE_MAX	//モードの数
 };
 
@@ -52,6 +53,7 @@ char colorNames[][5 + 1] = {
 const char* modeNames[] = {
 	"１Ｐ ＧＡＭＥ",//MODE_1P
 	"２Ｐ ＧＡＭＥ",//MODE_2P
+	"ＡＩ ＯＮＬＹ",//MODE_WATCH
 };
 
 //現在のゲームモードを宣言する
@@ -68,12 +70,6 @@ int AIx, AIy;
 
 //ターンを定義する
 int turn;
-
-//ベクトル構造体を宣言する
-typedef struct 
-{
-	int x, y;
-}VEC2;
 
 //チェックする方向のベクトルを定義する
 int directions[][2] = {
@@ -238,6 +234,13 @@ void SelectMode() {
 				isPlayer[COLOR_BLACK] = isPlayer[COLOR_WHITE] = true; 
 
 				break;
+
+			case MODE_WATCH://観戦モード
+				//両者をAIにする
+				isPlayer[COLOR_BLACK] = isPlayer[COLOR_WHITE] = false;
+
+				break;
+
 			}
 
 			return;//モード選択を抜ける
@@ -325,26 +328,23 @@ int main() {
 			while (!checkCanPut(turn, AIx, AIy, false))
 			{
 				//AIの座標をランダムで取得する
-				int AIx = rand() % BOARD_WIDTH;
-				int AIy = rand() % BOARD_HEIGHT;
+				AIx = rand() % BOARD_WIDTH;
+				AIy = rand() % BOARD_HEIGHT;
 				//AIの座標が置けるモノになったら
 				if (checkCanPut(turn, AIx, AIy, false))
 				{
 					//石が置ける状態
 					checkCanPut(turn, AIx, AIy, true);
-					break;
-				}
-				//自分のターンで置けない場合(パスの処理)
-				if (!checkCanPutAll(turn)) {
 					//ターンを切り替える
 					turn ^= 1;
+					//自分のターンで置けない場合(パスの処理)
+					if (!checkCanPutAll(turn)) {
+						//ターンを切り替える
+						turn ^= 1;
+					}
 					break;
 				}
-			};
-
-			//ターンを切り替える
-			turn ^= 1;
-					
+			};					
 		}
 
 		//範囲外にカーソルが行かないようにする
