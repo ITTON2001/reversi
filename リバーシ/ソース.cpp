@@ -2,6 +2,9 @@
 #include<conio.h>
 #include<stdlib.h>
 #include<stdio.h>
+#include<vector>//ベクターヘッダーをインクルードする
+#include<time.h>//時間管理ヘッダーをインクルードする
+
 
 //[2]定数を定義する
 #define BOARD_WIDTH		8
@@ -30,12 +33,29 @@ enum {
 	DIRECTION_MAX
 };
 
-//[4]変数を定義する
+//ゲームモードの種類を定義する
+enum
+{
+	MODE_1P,	//AIとの対戦モード
+	MODE_2P,	//人間同士の対戦モード
+	MODE_MAX	//モードの数
+};
+
+//[4]変数を宣言する
 //ターンの色を定義する
 char colorNames[][5 + 1] = {
 	"Black",//COLOR_BLACK
 	"White"//COLOR_WHITE
 };
+
+//モードの名前を宣言する
+const char* modeNames[] = {
+	"１Ｐ ＧＡＭＥ",//MODE_1P
+	"２Ｐ ＧＡＭＥ",//MODE_2P
+};
+
+//現在のゲームモードを宣言する
+int mode;
 
 //セルを定義する
 int cells[BOARD_HEIGHT][BOARD_WIDTH];
@@ -43,8 +63,17 @@ int cells[BOARD_HEIGHT][BOARD_WIDTH];
 //カーソルを定義する
 int cursorX, cursorY;
 
+//AIの座標を定義する
+int AIx, AIy;
+
 //ターンを定義する
 int turn;
+
+//ベクトル構造体を宣言する
+typedef struct 
+{
+	int x, y;
+}VEC2;
 
 //チェックする方向のベクトルを定義する
 int directions[][2] = {
@@ -57,6 +86,9 @@ int directions[][2] = {
 	{1.0},// DIRECTION_RIGHT
 	{1,-1},// DIRECTION_UP_RIGHT
 };
+
+//各ターンがプレイヤー歌道か宣言する
+bool isPlayer[COLOR_MAX];
 
 //石が置けるか判定する(+turnOverフラグを行う)
 bool checkCanPut(int _color, int _x, int _y,bool _turnOver) {
@@ -134,9 +166,13 @@ void drawBoard() {
 	//盤面を定義する
 	for (int y = 0; y < BOARD_HEIGHT; y++) {
 		for (int x = 0; x < BOARD_WIDTH; x++)
-			//カーソルの設定
-			if ((x == cursorX) && (y == cursorY))
-				printf("◎");			
+			//プレイヤーの担当かどうか判定する
+			
+				//カーソルの設定
+			if ((x == cursorX) && (y == cursorY)) {
+				if (isPlayer[turn])
+					printf("◎");
+			}
 			else {
 				switch (cells[y][x])
 				{
@@ -146,12 +182,76 @@ void drawBoard() {
 				}
 			}
 
+
 		printf("\n");//改行
+	}
+}
+
+//モード選択画面を作成する
+void SelectMode() {
+	//ゲームモードを初期化する
+	mode = MODE_1P;
+	//ループ
+	while (1)
+	{
+		//画面をクリアする
+		system("cls");
+
+		//メッセージを表示する
+		printf("モードを　選択して\nください\n");
+
+		printf("\n\n");//2行空ける
+
+		//すべてのモードを反復する
+		for (int i = 0; i < MODE_MAX; i++)
+		{
+			//現在のモードにはカーソルを、それ以外にはスペースを描画する
+			printf("%s ", (i == mode) ? "＞" : "　");
+
+			printf("%s\n", modeNames[i]);//モードの名前を描画する
+
+			printf("\n");//1行空ける
+		}
+
+		switch (_getch())
+		{
+		case 'w':	//wキーが押されたら
+			mode--; //前のモードに切り替える
+			break;
+		case 's':	//sキーが押されたら
+			mode++; //次のモードに切り替える
+			break;
+		default://その他のキーが押されたら
+
+			//選択されたモードで分岐する
+			switch (mode)
+			{
+			case MODE_1P://AIと対戦するモード
+
+				isPlayer[COLOR_BLACK] = true; //黒をプレイヤーにする
+				isPlayer[COLOR_WHITE] = false;//白をプレイヤーにしない
+
+				break;
+			case MODE_2P://人間同士の対戦モード
+
+				//両者をプレイヤー担当にする
+				isPlayer[COLOR_BLACK] = isPlayer[COLOR_WHITE] = true; 
+
+				break;
+			}
+
+			return;//モード選択を抜ける
+		}
 	}
 }
 
 //メイン
 int main() {
+	start://開始ラベル
+		;//空文
+
+	SelectMode();//モード選択する関数を呼び出す
+
 	//盤面をリセットする
 	for (int y = 0; y < BOARD_HEIGHT; y++)
 		for (int x = 0; x < BOARD_WIDTH; x++)
@@ -161,12 +261,16 @@ int main() {
 	cells[3][3] = cells[4][4] = COLOR_WHITE;
 	cells[3][4] = cells[4][3] = COLOR_BLACK;
 
+	//黒を先攻にする
+	turn = 0;
+
 	//石が置けないというフラグ
 	bool cantPut = false;//通常はfalseにしておく
 
 	//ループ
 	while (1)
 	{
+		srand((unsigned int)time(NULL));
 		//描画する
 		drawBoard();
 		
@@ -180,34 +284,63 @@ int main() {
 		//cantPutフラグを終了する
 		cantPut = false;
 
-		//カーソルの操作
-		switch (_getch())
+		//現在のターンの担当がプレイヤー化どうか判定する
+		if (isPlayer[turn])
 		{
-		case 'w':	cursorY--; break;
-		case 's':	cursorY++; break;
-		case 'a':	cursorX--; break;
-		case 'd':	cursorX++; break;
-		default:
-			//石が置けない場所の場合
-			if (!checkCanPut(turn, cursorX, cursorY, false)) {
-				cantPut = true;//cantPutをtrueにする
-				break;
-			}
+			//カーソルの操作
+			switch (_getch())
+			{
+			case 'w':	cursorY--; break;
+			case 's':	cursorY++; break;
+			case 'a':	cursorX--; break;
+			case 'd':	cursorX++; break;
+			default:
+				//石が置けない場所の場合
+				if (!checkCanPut(turn, cursorX, cursorY, false)) {
+					cantPut = true;//cantPutをtrueにする
+					break;
+				}
 
-			//石が置ける場合
-			checkCanPut(turn, cursorX, cursorY, true);
+				//石が置ける場合
+				checkCanPut(turn, cursorX, cursorY, true);
 
-			//上記以外のキーを押すと現在のターンの石を配置する
-			cells[cursorY][cursorX] = turn;
-			//ターンを切り替える
-			turn ^= 1;
-
-			//自分のターンで置けなかった場合(パスの処理)
-			if (!checkCanPutAll(turn))
+				//上記以外のキーを押すと現在のターンの石を配置する
+				cells[cursorY][cursorX] = turn;
 				//ターンを切り替える
 				turn ^= 1;
-				printf("配置できる場所がないため、パスされました");
-			break;
+
+				//自分のターンで置けなかった場合(パスの処理)
+				if (!checkCanPutAll(turn)) {
+					//ターンを切り替える
+					turn ^= 1;
+				}
+				break;
+			}
+		}
+		//現在のターンの担当がプレイヤーでないなら
+		else
+		{
+			//対象の座標に石を置けるかどうか判定する
+			while (!checkCanPut(turn, AIx, AIy, false))
+			{
+				int AIx = rand() % BOARD_WIDTH;
+				int AIy = rand() % BOARD_HEIGHT;	
+				if (checkCanPut(turn, AIx, AIy, false))
+				{
+					checkCanPut(turn, AIx, AIy, true);
+					break;
+				}
+				//自分のターンで置けない場合(パスの処理)
+				if (!checkCanPutAll(turn)) {
+					//ターンを切り替える
+					turn ^= 1;
+					break;
+				}
+			};
+
+			//ターンを切り替える
+			turn ^= 1;
+					
 		}
 
 		//範囲外にカーソルが行かないようにする
@@ -254,7 +387,7 @@ int main() {
 			}
 
 			_getch();
-			break;
+			goto start;//開始ラベルにジャンプする
 		}
 	}
 }
