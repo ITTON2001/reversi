@@ -391,7 +391,7 @@ int main() {
 			}
 
 			_getch();
-			goto start;//開始ラベルにジャンプする
+			goto start;//開始ラベルにジャンプします
 		}
 	}
 }
